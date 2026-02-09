@@ -4,6 +4,7 @@
 
 ## Software
 - https://github.com/Arijit1080/RPLidar-Scanner-Using-Raspberry-PI
+- https://github.com/Hyun-je/pyrplidar
 
 ## Articles
 
