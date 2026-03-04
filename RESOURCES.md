@@ -8,6 +8,7 @@
 
 ## Articles
 - https://www.1x.tech/order
+- https://noerguerra.com/how-to-read-text-aloud-with-piper-and-python/
 
 ## Videos
 - https://www.youtube.com/watch?v=i5bt5gLs7zo
