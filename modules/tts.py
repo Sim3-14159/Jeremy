@@ -1,14 +1,18 @@
 """
-Speech module for text-to-speech functionality using EspeakNG and Piper.
+TTS module for text-to-speech functionality using EspeakNG and Piper.
 """
 
 import sounddevice as sd
-import numpy as np
 from piper.voice import PiperVoice
 
 __all__ = ["EspeakNGTTS", "PiperTTS"]
 
+
 class EspeakNGTTS:
+    """
+    [FAST (LOCAL)] --> LOW-QUALITY AUDIO
+    Interface to EspeakNG TTS engine.
+    """
     def __init__(self, voice: str="en+male"):
         self.voice = voice
     def speak(self, text: str):
@@ -17,6 +21,10 @@ class EspeakNGTTS:
 
 
 class PiperTTS:
+    """
+    [MEDIUM-FAST (LOCAL)] --> MEDIUM-HIGH-QUALITY AUDIO
+    Interface to Piper TTS engine.
+    """
     def __init__(self, model_path: str="en_US-hfc_male-medium.onnx"):
         self.voice = PiperVoice.load(model_path)
     
@@ -44,10 +52,3 @@ def play_text(voice: PiperVoice, text: str):
     
     stream.stop()
     stream.close()
-
-
-if __name__ == "__main__":
-    model = "en_US-hfc_male-medium.onnx"
-    voice = PiperVoice.load(model)
-    text = "Hey, I'm Jeremy, your AI assistant. How can I help you today?"
-    play_text(voice, text)

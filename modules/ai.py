@@ -17,6 +17,7 @@ import os
 
 __all__ = ["PollinationsAI", "OpenAIAI"]
 
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 SYSTEM_PROMPT = open("prompt.txt").read()
@@ -25,7 +26,7 @@ SYSTEM_PROMPT = open("prompt.txt").read()
 
 class PollinationsAI:
     """
-    [FREE (API)] --> TEXT
+    [FREE (API)] <-- TEXT 
     Interface to Pollinations AI.
     """
     
@@ -67,7 +68,7 @@ class PollinationsAI:
 
 class OpenAIAI:
     """
-    [PAID (API)] --> TEXT & IMAGES
+    [PAID (API)] <-- TEXT & IMAGES
     Interface to OpenAI API.
     """
 
