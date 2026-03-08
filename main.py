@@ -10,14 +10,14 @@ tts = tts.PiperTTS()
 
 while True:
     print("Waiting for 'Hey Jeremy' to be said...")
-    text = stt.listen()
-    print(f"You said: {text}")
-    if "hey jeremy" in text:
-        subprocess.run(["aplay", "responses/initial/" + random.choice(os.listdir("responses/initial/"))])
+    text = stt.wait_for_phrase("hey jeremy", "hi jeremy", "hello jeremy", 'jeremy')
+    print(f"\tHeard: {text}")
+    
+    subprocess.run(["aplay", "responses/initial/" + random.choice(os.listdir("responses/initial/"))])
 
-        print("\tListening for your question...")
-        text = stt.listen()
-        print(f"\tYou said: {text}")
-        response = ai.ask(text)
-        print(f"\tAI response: {response['message']}")
-        tts.speak(response["message"])
+    print("\tListening for your question...")
+    text = stt.listen()
+    print(f"\tYou said: {text}")
+    response = ai.ask(text)
+    print(f"\tAI response: {response['message']}")
+    tts.speak(response["message"])
