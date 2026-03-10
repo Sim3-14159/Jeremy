@@ -1,3 +1,3 @@
-from . import ai, tts, stt
+from . import ai, camera, gui, movement, stt, tts
 
-__all__ = ["ai", "tts", "stt"]
+__all__ = ["ai", "camera", "gui", "movement", "stt", "tts"]
