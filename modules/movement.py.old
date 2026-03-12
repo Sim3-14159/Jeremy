@@ -1,0 +1,58 @@
+import serial
+import time
+
+
+class MovementController:
+
+    def __init__(self, port="/dev/ttyUSB1", baudrate=115200):
+        self.ser = serial.Serial(port, baudrate, timeout=1)
+
+        self.ser.reset_input_buffer()
+
+        # enable realtime pulses
+        self.ser.write(b"$upload:0,1,0#")
+        time.sleep(0.1)
+
+    def set_speed(self, m1, m2, m3, m4):
+        cmd = f"$spd:{m1},{m2},{m3},{m4}#"
+        self.ser.write(cmd.encode())
+
+    def stop(self):
+        self.set_speed(0,0,0,0)
+
+    def read_mtep(self):
+
+        while True:
+            line = self.ser.readline().decode(errors="ignore").strip()
+
+            if not line:
+                continue
+
+            if line.startswith("$MTEP:"):
+                vals = line.split(":")[1].strip("#")
+                return list(map(int, vals.split(",")))
+
+    def drive(self, meters):
+
+        ticks_per_meter = 943
+        target = meters * ticks_per_meter
+
+        total = 0
+
+        self.set_speed(200,200,200,200)
+
+        while total < target:
+
+            m1,m2,m3,m4 = self.read_mtep()
+
+            step = (m1+m2+m3+m4)/4
+            total += step
+
+            print("step:", step, "total:", total)
+
+        self.stop()
+        time.sleep(0.5)
+
+    def close(self):
+        self.stop()
+        self.ser.close()

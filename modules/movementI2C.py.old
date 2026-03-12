@@ -1,0 +1,69 @@
+import smbus
+import time
+import struct
+
+class MotorBoardI2C:
+    def __init__(self, bus_num=1, addr=0x26):
+        self.bus = smbus.SMBus(bus_num)
+        self.addr = addr
+
+    # ------------------------
+    # Motor commands
+    # ------------------------
+    def set_speed(self, m1, m2, m3, m4):
+        """Set motor speeds (encoder motors), range -1000~1000"""
+        data = self._pack_speeds([m1, m2, m3, m4])
+        self.bus.write_i2c_block_data(self.addr, 0x06, data)
+
+    def set_pwm(self, m1, m2, m3, m4):
+        """Set motor PWM directly, range -3600~3600"""
+        data = self._pack_speeds([m1, m2, m3, m4])
+        self.bus.write_i2c_block_data(self.addr, 0x07, data)
+
+    # ------------------------
+    # Encoder readings
+    # ------------------------
+    def read_encoder_total(self, motor_id):
+        """motor_id: 1-4, returns total pulse count (int)"""
+        high_reg = 0x1F + motor_id*2  # M1:0x20, M2:0x22, M3:0x24, M4:0x26
+        low_reg = high_reg + 1
+        high = self.bus.read_i2c_block_data(self.addr, high_reg, 2)
+        low = self.bus.read_i2c_block_data(self.addr, low_reg, 2)
+        # Combine 32-bit value
+        val = (high[0]<<24 | high[1]<<16 | low[0]<<8 | low[1])
+        # Convert signed
+        if val & 0x80000000:
+            val -= 1 << 32
+        return val
+
+    def read_encoder_realtime(self, motor_id):
+        """motor_id: 1-4, returns 10ms pulse data"""
+        reg = 0x0F + motor_id  # M1:0x10, M2:0x11, M3:0x12, M4:0x13
+        data = self.bus.read_i2c_block_data(self.addr, reg, 2)
+        val = (data[0]<<8 | data[1])
+        if val & 0x8000:
+            val -= 1 << 16
+        return val
+
+    # ------------------------
+    # Battery
+    # ------------------------
+    def read_battery(self):
+        """Returns battery voltage in volts"""
+        data = self.bus.read_i2c_block_data(self.addr, 0x08, 2)
+        val = (data[0]<<8 | data[1])
+        return val / 10.0
+
+    # ------------------------
+    # Helpers
+    # ------------------------
+    def _pack_speeds(self, speeds):
+        """Convert four int16 speeds to a byte array (big endian)"""
+        data = []
+        for spd in speeds:
+            spd = max(-3600, min(3600, spd))  # clip
+            data.extend([(spd >> 8) & 0xFF, spd & 0xFF])
+        return data
+
+    def stop(self):
+        self.set_speed(0, 0, 0, 0)

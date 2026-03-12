@@ -49,7 +49,7 @@ while True:
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        tts.speak(f"Huh, something went wrong. It looks like the code raised a {str(e)[8:-2]}. Here are some details:")
+        tts.speak(f"Huh, something went wrong. It looks like the code raised a {e}. Here are some details:")
         for attr in dir(e):
             if not attr.startswith("__"):
                 if not callable(getattr(e, attr)):
