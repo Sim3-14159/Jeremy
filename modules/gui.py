@@ -97,9 +97,6 @@ class _LiDARVisual:
         self.draw_radar(self.points)
 
     def draw_radar(self, points):
-        #pygame.draw.rect(self.screen, BACKGROUND_COLOR, self.subscreen_rect)
-
-        # Draw points
         for angle, distance in points:
             x, y = self._polar_to_cartesian(angle, distance)
             color = self.COLOR1 if distance < 1000 else self.COLOR2 if distance < 2000 else self.COLOR3

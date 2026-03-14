@@ -85,7 +85,7 @@ class OpenAIAI:
                 ]
             })
 
-    def ask(self, question: str, image_path: str | None = None) -> dict:
+    def ask(self, question: str, image_path: str | None = None, sensor_data: dict | None = None) -> dict:
         if not question.strip():
             raise ValueError("Question cannot be empty")
 
@@ -113,6 +113,13 @@ class OpenAIAI:
                 "image_url": f"data:{media_type};base64,{base64_image}"
             })
 
+        # Attach sensor data if provided
+        if sensor_data:
+            content.append({
+                "type": "input_sensor_data",
+                "sensor_data": sensor_data
+            })
+
         self.messages.append({
             "role": "user",
             "content": content
@@ -129,9 +136,11 @@ class OpenAIAI:
             parsed = json.loads(text)
             message = parsed.get("message", "")
             code = parsed.get("code", "")
+            completed_task = parsed.get("completed_task", "yes") # default to completed so we don't get stuck in a loop
         except Exception:
             message = text
             code = ""
+            completed_task = "yes" # if we can't parse the response, assume the task was completed to avoid getting stuck in a loop
 
         self.messages.append({
             "role": "assistant",
@@ -143,8 +152,10 @@ class OpenAIAI:
         return {
             "message": message,
             "code": code,
+            "completed_task": completed_task,
             "raw": response.model_dump()
         }
+
 
     def _encode_image_to_base64(self, image_path: str) -> str:
         """Encode image file to base64."""
