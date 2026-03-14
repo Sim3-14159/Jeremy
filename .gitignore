@@ -5,3 +5,4 @@ __pycache__/
 *.onnx.json
 model/
 *.jpg
+*.jpeg
