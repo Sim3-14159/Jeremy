@@ -26,45 +26,107 @@ SYSTEM_PROMPT = open("prompt.txt").read()
 
 class PollinationsAI:
     """
-    [FREE (API)] <-- TEXT 
+    [FREE / API] <-- TEXT & IMAGES
     Interface to Pollinations AI.
     """
-    
-    def __init__(self, model="openai-fast"):
-        self.conversation = SYSTEM_PROMPT
-        self.model = model
 
-    def ask(self, question: str) -> dict:
+    def __init__(self, model="openai", api_key=None):
+        self.model = model
+        self.api_key = api_key or os.getenv("POLLINATIONS_API_KEY")
+        self.messages = []
+
+        if SYSTEM_PROMPT:
+            self.messages.append({
+                "role": "system",
+                "content": SYSTEM_PROMPT
+            })
+
+    def ask(self, question: str, image_path: str | None = None) -> dict:
         if not question.strip():
             raise ValueError("Question cannot be empty")
 
-        self.conversation += f"\nUser: {question}\nAssistant:"
+        content = [
+            {"type": "text", "text": question}
+        ]
 
-        prompt = urllib.parse.quote(self.conversation, safe="")
-        url = (
-            f"https://text.pollinations.ai/{prompt}?model={self.model}&json=true"
+        # Attach image if provided
+        if image_path:
+            base64_image = self._encode_image_to_base64(image_path)
+            ext = os.path.splitext(image_path)[1].lower()
+
+            media_type_map = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".gif": "image/gif",
+                ".webp": "image/webp"
+            }
+
+            media_type = media_type_map.get(ext, "image/jpeg")
+
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{media_type};base64,{base64_image}"
+                }
+            })
+
+        self.messages.append({
+            "role": "user",
+            "content": content
+        })
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        payload = {
+            "model": self.model,
+            "messages": self.messages
+        }
+
+        response = requests.post(
+            "https://gen.pollinations.ai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=60
         )
 
-        response = requests.get(url, timeout=60)
         response.raise_for_status()
+        data = response.json()
 
-        try: 
-            data = response.json()
-        except ValueError:
-            raise RuntimeError("Invalid JSON returned by AI")
+        message_text = data["choices"][0]["message"]["content"]
 
-        message = data.get("message", "")
-        code = data.get("code", "")
+        try:
+            parsed = json.loads(message_text)
+            message = parsed.get("message", "")
+            code = parsed.get("code", "")
+        except Exception:
+            message = message_text
+            code = ""
 
-        # Append raw AI response to conversation (same as JS)
-        self.conversation += response.text
+        self.messages.append({
+            "role": "assistant",
+            "content": [
+                {"type": "text", "text": message}
+            ]
+        })
 
         return {
             "message": message,
             "code": code,
             "raw": data
         }
-    
+
+
+    def _encode_image_to_base64(self, image_path: str) -> str:
+        """Encode image file to base64."""
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+
 
 class OpenAIAI:
     """

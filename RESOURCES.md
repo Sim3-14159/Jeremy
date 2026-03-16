@@ -9,6 +9,8 @@
 ## Articles
 - https://www.1x.tech/order
 - https://noerguerra.com/how-to-read-text-aloud-with-piper-and-python/
+- https://www.yahboom.net/study/Dual-MD-Module
+- https://www.yahboom.net/public/upload/upload-html/1740570726/1.2%20Control%20command.html
 
 ## Videos
 - https://www.youtube.com/watch?v=i5bt5gLs7zo
