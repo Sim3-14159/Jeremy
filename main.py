@@ -1,8 +1,8 @@
-from modules import *
-
-# TODO: Clean this up so we don't do MovementController = MovementController(), and instead we make the AI use a better named instance
-from modules.movement import MovementController
-MovementController = MovementController()
+from modules.ai import *
+from modules.stt import *
+from modules.tts import *
+from modules.movement import *
+from modules.camera import capture_image
 
 import os
 import subprocess
@@ -17,31 +17,69 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--image-path", default="image.jpg")
 args = parser.parse_args()
 
-stt = stt.VoskSTT()
-ai = ai.OpenAIAI()
-tts = tts.PiperTTS()
+stt = VoskSTT()
+ai = OpenAIAI()
+tts = PiperTTS()
+movement = MovementController()
 lidar = PyRPlidar()   
 lidar.connect(port="/dev/ttyUSB0", baudrate=460800, timeout=3)
-#lidar.set_motor_pwm(500)
+lidar.set_motor_pwm(500)
 time.sleep(2) # wait to initialize
-#scan_generator = lidar.force_scan()
+scan_generator = lidar.force_scan()
+#updating_scans = scan_generator()
 
 response = {"completed_task": "yes"} # initialize task_completed so that we don't get an error when we try to check it before the first AI response is received
 
-tts.speak("Hey! I'm initialized! Finally!")
+tts.speak("Initialization complete.")
 
+
+scan_iter = scan_generator()
+
+def get_scan_data():
+    scan_data = {}
+
+    count = 0
+    MAX_POINTS = 360  # tweak as needed
+
+    for scan in scan_iter:
+        angle = int(scan.angle)
+        distance = int(scan.distance)
+
+        if -100 <= angle <= 100:
+            scan_data[angle] = distance
+            count += 1
+
+        if count >= MAX_POINTS:
+            return scan_data
+
+
+# main loop
 while True:
     try:
-        while response["completed_task"] == "no":
+        # go in a non-name saying loop while the task isn't completed
+        while response.get("completed_task", "yes") == "no":
             print(f"\033[35mListening...\033[0m")
+
             text = stt.listen()
+            image = capture_image(args.image_path)
+
             print(f"\033[35mHeard:\033[36m {text}\033[0m")
-            response = ai.ask(text, image_path=args.image_path)
-            print(f"\033[35mAI response:\033[36m {response['message']}\033[0m")
-            print(f"\033[35mAI code:\033[0m {response['code']}")
-            print(f"\033[35mAI completed task:\033[36m {response['completed_task']}\033[0m")
-            tts.speak(response["message"])
-            exec(response["code"])
+
+            response = ai.ask(text, args.image_path, get_scan_data())
+
+            # temp is used because, prior to Python 3.12, you can't use escape sequences within the { and } of an f-string
+            temp = "\033[31m(no message returned)" 
+            print(f"\033[35mAI response:\033[36m {response.get('message', temp)}\033[0m")
+
+            temp = "\033[31m(no code returned)"
+            print(f"\033[35mAI code:\033[0m {response.get('code', temp)}")
+
+            temp = "\033[31m(no completed_task)"
+            print(f"\033[35mAI completed task:\033[36m {response.get('completed_task', temp)}\033[0m")
+
+            tts.speak(response.get("message", "I think something went wrong. I didn't get any response from the AI."))
+            movement.send(response.get("code", ""))
+
 
         print("\033[35mWaiting for 'Hey Jeremy' to be said...\033[0m")
         text = stt.wait_for_phrase("hey jeremy", "hi jeremy", "hello jeremy", 'jeremy')
@@ -51,33 +89,38 @@ while True:
 
         print("\033[35mListening for your question...\033[0m")
         text = stt.listen()
-        image = camera.capture_image(args.image_path)
+        image = capture_image(args.image_path)
 
         print(f"\033[35mYou said:\033[36m {text}\033[0m")
-        response = ai.ask(text, image_path=args.image_path)
-        print(f"\033[35mAI response:\033[36m {response['message']}\033[0m")
-        print(f"\033[35mAI code:\033[0m {response['code']}")
-        print(f"\033[35mAI completed task:\033[36m {response['completed_task']}\033[0m")
-        tts.speak(response["message"])
-        exec(response["code"])
+        response = ai.ask(text, args.image_path, get_scan_data())
+
+        # temp is used because, prior to Python 3.12, you can't use escape sequences within the { and } of an f-string
+        temp = "\033[31m(no message returned)" 
+        print(f"\033[35mAI response:\033[36m {response.get('message', temp)}\033[0m")
+
+        temp = "\033[31m(no code returned)"
+        print(f"\033[35mAI code:\033[0m {response.get('code', temp)}")
+
+        temp = "\033[31m(no completed_task)"
+        print(f"\033[35mAI completed task:\033[36m {response.get('completed_task', temp)}\033[0m")
+
+        tts.speak(response.get("message", "I didn't get any message back from the API."))
+        movement.send(response.get("code", ""))
+
 
     except HTTPError as e: # if it's an HTTPError, it's probably just Pollinations API being dumb, so it can be ignored and moved on from
         print(f"\033[35mDumb network error (ignoring):\033[36m {e}\033[0m")
         tts.speak(f"Huh, it looks like there was a network error. I think my AI is just being dumb right now, so I'm going to ignore it.")
     
+
     except KeyboardInterrupt:
+        lidar.stop()
+        lidar.disconnect()
         print("\033[35mExiting...\033[0m")
         break
 
+
     except Exception as e:
-        print(f"An error occurred: {e}")
-        # clean up
+        lidar.stop()
         lidar.disconnect() 
-        # explain error
-        tts.speak(f"Huh, something went wrong. It looks like the code raised a {e}. Here are some details:")
-        for attr in dir(e):
-            if not attr.startswith("__"):
-                if not callable(getattr(e, attr)):
-                    tts.speak(f"\t{attr}: {getattr(e, attr)}")
-        
         raise e # if it's not an HTTPError, re-raise it so we can see the full traceback and fix the bug

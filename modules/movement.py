@@ -3,6 +3,8 @@ is handled by pico/module_code.py."""
 
 from serial import Serial
 
+__all__ = ["MovementController"]
+
 class MovementController:
     def __init__(self, port_path: str="/dev/ttyACM0", baudrate=9600):
         self.ser = Serial(port_path, baudrate)
@@ -16,3 +18,4 @@ class MovementController:
     def send(self, command: str):
         self.ser.write(command.encode())
         self.ser.write(b'\x00')
+        self.ser.flush()

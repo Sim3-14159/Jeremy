@@ -41,7 +41,7 @@ class PollinationsAI:
                 "content": SYSTEM_PROMPT
             })
 
-    def ask(self, question: str, image_path: str | None = None) -> dict:
+    def ask(self, question: str, image_path: str | None = None, sensor_data: dict | None = None) -> dict:
         if not question.strip():
             raise ValueError("Question cannot be empty")
 
@@ -70,6 +70,13 @@ class PollinationsAI:
                     "url": f"data:{media_type};base64,{base64_image}"
                 }
             })
+        
+        if sensor_data:
+            content.append({
+                "type": "text",
+                "text": json.dumps(sensor_data, sort_keys=True)
+            })
+
 
         self.messages.append({
             "role": "user",
@@ -106,12 +113,12 @@ class PollinationsAI:
             code = parsed.get("code", "")
         except Exception:
             message = message_text
-            code = ""
+            code = "# bad JSON"
 
         self.messages.append({
             "role": "assistant",
             "content": [
-                {"type": "text", "text": message}
+                {"type": "input_text", "input_text": message}
             ]
         })
 
@@ -172,14 +179,14 @@ class OpenAIAI:
 
             content.append({
                 "type": "input_image",
-                "image_url": f"data:{media_type};base64,{base64_image}"
+                "image_url":  f"data:{media_type};base64,{base64_image}"
             })
 
         # Attach sensor data if provided
         if sensor_data:
             content.append({
-                "type": "input_sensor_data",
-                "sensor_data": sensor_data
+                "type": "input_text",
+                "text": json.dumps(sensor_data, sort_keys=True)
             })
 
         self.messages.append({

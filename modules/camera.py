@@ -8,4 +8,5 @@ __all__ = ["capture_image"]
 
 ##### IMAGE CAPTURE #####
 def capture_image(file_path: str="image.jpg"):
-    subprocess.run(["rpicam-jpeg", "-t", "1", "--nopreview", "-o", file_path])
+    subprocess.run(["rpicam-jpeg", "-t", "1", "--nopreview", "-o", file_path], stdout=subprocess.DEVNULL) 
+    # no output because of DEVNULL
